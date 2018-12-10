@@ -11,7 +11,12 @@ output:
 
 #Podsumowanie analizy
 
-Projekt by³ dla mnie wymagaj¹cy i ciekawy, poniewa¿ pozwoli³ mi zmierzyæ siê z analiz¹ tak du¿ych danych. Najwiêcej problemów przystworzy³o mi ci¹g³e dostosowywanie danych tak, aby wystarczy³o mi pamiêci operacyjnej. Wykona³em wiêkszoœæ z postawionych zadañ, ale mia³em te¿ problemy mniejsze lub wiêksze. Najtrudniejsza by³a dla mnie budowa klasyfikatora i niestety do tej pory nie dzia³a on najlepiej. 
+Projekt by³ dla mnie wymagaj¹cy i ciekawy, poniewa¿ pozwoli³ mi zmierzyæ siê z analiz¹ tak du¿ych danych. Najwiêcej problemów przystworzy³o mi ci¹g³e dostosowywanie danych tak, aby wystarczy³o mi pamiêci operacyjnej. 
+Wykona³em wiêkszoœæ z postawionych zadañ, ale mia³em te¿ problemy mniejsze lub wiêksze. 
+Klasyfikator - najtrudniejsza by³a dla mnie budowa klasyfikatora i niestety do tej pory nie dzia³a on najlepiej, poniewa¿ daje wyniki tylko na ma³ej iloœci danych, a nie na ca³ym zbiorze. 
+Rozk³ad wartoœci kolumn zaczynaj¹cych siê od part01_ - uwa¿am, ¿e przedstawienie wszystkich 106 kolumn na jednym wykresie nie jest zbyt optymalne, ale gdy chcia³em stworzyæ osobny dla ka¿dego mia³em b³êdy kompilacji. 
+Reszta zadañ - z wykonania reszty zadañ jestem zadowolony.
+
 
 
 #£adowanie bibliotek
@@ -73,17 +78,19 @@ top50 <- test %>% filter(res_name == test1$res_name)
 
 ```{r, korelacja}
 
-k <- top50 %>% select(local_res_atom_non_h_count, dict_atom_non_h_count, local_res_atom_non_h_electron_sum, dict_atom_non_h_electron_sum) 
+k <- top50 %>% select_if(is.numeric)
 
-kor <- cor(k)
+kor <- k[complete.cases(k),]
 
-kor_melt <- melt(kor)
+kor_round <- round(cor(kor),2)
 
-kor_gg <- ggplot(kor_melt, aes(Var1, Var2, fill = value)) + geom_tile() + theme(axis.text.x = element_text(angle = 90))
+kor_melt <- melt(kor_round) %>% arrange(value)
 
-kor_plt <- ggplotly(kor_gg)
+kor_gg <- ggplot(kor_melt, aes(Var1, Var2, fill = value)) + geom_tile() +
+  scale_fill_gradient(low = "red", high = "blue") +
+  theme(axis.text.x = element_blank(), axis.text.y= element_blank())
 
-kor_plt
+kor_gg
 
 
 ```
@@ -140,15 +147,16 @@ top50 %>%
 
 dim(top50)
 
-#part01 <- top50 %>% select(starts_with("part_01")) %>% gather(nazwa, wartosc, 1:106)
+part01 <- top50 %>% select(starts_with("part_01")) %>% gather(nazwa, wartosc, 1:106)
 
-#ggplot(part01, aes(nazwa, wartosc)) + geom_boxplot()
+ggplot(part01, aes(nazwa, wartosc)) + geom_boxplot() + theme(axis.text.x = element_blank())
 
 
 ```
 
 #Regresja liniowa
 #Liczba elektronów 
+
 ```{r, regresja_elektrony, warning=FALSE,message=FALSE}
 data_top50 <- top50 %>% select_if(is.numeric)
  
@@ -172,6 +180,7 @@ data_top50 <- top50 %>% select_if(is.numeric)
  postResample(pred = prediction, obs = data_test$local_res_atom_non_h_electron_sum)
 
 ```
+
 #Liczba atomów
 
 ```{r, regresja_atomy, warning=FALSE,message=FALSE}
@@ -199,13 +208,13 @@ postResample(pred = prediction, obs = data_test_a$local_res_atom_non_h_count)
 ```
 
 #Klasyfikator 
-```{r, klasyfikator, warning=TRUE}
+```{r, klasyfikator}
 
-# usun <- c("blob_coverage", "res_coverage", "local_res_atom_non_h_count", "local_res_atom_non_h_electron_sum", "dict_atom_non_h_count", "dict_atom_non_h_electron_sum")
+#  usun <- c("blob_coverage", "res_coverage", "local_res_atom_non_h_count", "local_res_atom_non_h_electron_sum", "dict_atom_non_h_count", "dict_atom_non_h_electron_sum")
 # 
-# data_top50_k <- top50 %>% select(-usun) %>% head(10000)
+#  data_top50_k <- top50 %>% select(-usun)
 # 
-# data_top50_k$res_name <- as.factor(data_top50_k$res_name)
+#  data_top50_k$res_name <- as.factor(data_top50_k$res_name)
 # 
 # set.seed(23)
 # partition <- createDataPartition(
