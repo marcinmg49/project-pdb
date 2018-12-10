@@ -1,0 +1,237 @@
+---
+title: "Projekt z analizy danych"
+author: "Marcin Grzebielucha"
+date: "25 listopada 2018"
+output: 
+  html_document: 
+    keep_md: yes
+    toc: yes
+    toc_float: yes
+---
+
+#Podsumowanie analizy
+
+Projekt by³ dla mnie wymagaj¹cy i ciekawy, poniewa¿ pozwoli³ mi zmierzyæ siê z analiz¹ tak du¿ych danych. Najwiêcej problemów przystworzy³o mi ci¹g³e dostosowywanie danych tak, aby wystarczy³o mi pamiêci operacyjnej. Wykona³em wiêkszoœæ z postawionych zadañ, ale mia³em te¿ problemy mniejsze lub wiêksze. Najtrudniejsza by³a dla mnie budowa klasyfikatora i niestety do tej pory nie dzia³a on najlepiej. 
+
+
+#£adowanie bibliotek
+
+```{r, £adowanie bibliotek, warning=FALSE, message=FALSE}
+library(dplyr)    
+library(ggplot2)
+library(plotly)
+library(tidyr)
+library(knitr)
+library(caret)
+library(data.table)
+```
+
+#£adowanie danych
+
+```{r, £adowanie danych, warning=FALSE, error=FALSE}
+d <- fread("~/all_summary.csv", header = TRUE, sep = ";", quote = "\"", drop = c("title", "pbd_code", "res_id", "chain_id", "local_BAa", "local_NPa", "local_Ra", "local_RGa", "local_SRGa", "local_CCSa", "local_CCPa", "local_ZOa", "local_ZDa", "local_ZD_minus_a", "local_ZD_plus_a", "local_res_atom_count", "local_res_atom_non_h_occupancy_sum", "local_res_atom_non_h_electron_occupancy_sum", "local_res_atom_C_count", "local_res_atom_N_count", "local_res_atom_O_count", "local_res_atom_S_count", "dict_atom_C_count", "dict_atom_N_count", "dict_atom_O_count", "dict_atom_S_count","fo_col", "fc_col", "weight_col", "grid_space", "solvent_radius", "solvent_opening_radius", "part_step_FoFc_std_min", "part_step_FoFc_std_max", "part_step_FoFc_std_step"))
+
+```
+
+#Usuwanie zbêdnych wartoœci z res_name
+
+```{r, Usuwanie z res_name, warning=FALSE}
+
+dane <- d %>%
+        filter(res_name != c("UNK", "UNX", "UNL", "DUM", "N", "BLOB", "ALA", "ARG", "ASN", "ASP", "CYS", "GLN", "GLU", "GLY", "HIS", "ILE", "LEU", "LYS", "MET", "MSE", "PHE", "PRO", "SEC", "SER", "THR", "TRP", "TYR", "VAL", "DA", "DG", "DT", "DC", "DU", "A", "G", "T", "C", "U", "HOH", "H20", "WAT"))
+
+```
+
+#Przetwarzanie brakuj¹cych danych
+
+```{r, brakuj¹ce}
+
+test <- dane %>% drop_na()
+
+```
+
+#Podsumowanie zbioru danych
+
+```{r, prezentacja danych}
+
+dim(test)
+str(c(test$res_name, test$blob_coverage, test$blob_volume_coverage, test$local_res_atom_non_h_count, test$local_res_atom_non_h_electron_sum))
+
+```
+
+#50 najpopularniejszych w res_name
+
+```{r, najpopularniejsze, warning=FALSE}
+
+test1 <- test %>% group_by(res_name) %>% summarize(ile = n()) %>% arrange(desc(ile)) %>% head(50)
+
+top50 <- test %>% filter(res_name == test1$res_name)
+
+```
+
+#Korelacja zmiennych
+
+```{r, korelacja}
+
+k <- top50 %>% select(local_res_atom_non_h_count, dict_atom_non_h_count, local_res_atom_non_h_electron_sum, dict_atom_non_h_electron_sum) 
+
+kor <- cor(k)
+
+kor_melt <- melt(kor)
+
+kor_gg <- ggplot(kor_melt, aes(Var1, Var2, fill = value)) + geom_tile() + theme(axis.text.x = element_text(angle = 90))
+
+kor_plt <- ggplotly(kor_gg)
+
+kor_plt
+
+
+```
+
+#Ile przyk³adów ma ka¿da z res_name
+
+```{r, ile_przyk³adów}
+ile <- top50 %>% group_by(res_name) %>% summarize(ile = n()) %>% arrange(desc(ile))
+
+ile
+
+```
+
+#Wykresy rozk³adów liczby atomów i elektronów
+
+```{r, wykresy_rozk³ady}
+ga <- ggplot(top50, aes(local_res_atom_non_h_count)) + geom_density() + ggtitle("Atomy") 
+
+ge <- ggplot(top50, aes(local_res_atom_non_h_electron_sum)) + geom_density() + ggtitle("Elektrony") 
+
+ga1 <- ggplotly(ga)
+
+ge1 <-ggplotly(ge) 
+
+ga1
+ge1
+
+```
+
+
+#10 klas z najwiêksz¹ niezgodnoœci¹ liczby atomów i elektronów
+
+```{r, niezgodne}
+
+top50 %>%
+  select(res_name, local_res_atom_non_h_count, dict_atom_non_h_count) %>%
+  group_by(res_name) %>%
+  summarise(niezgodnosc = mean(abs(local_res_atom_non_h_count - dict_atom_non_h_count))) %>%
+  arrange(-niezgodnosc) %>%
+  head(10) 
+
+top50 %>%
+  select(res_name, local_res_atom_non_h_electron_sum, dict_atom_non_h_electron_sum) %>%
+  group_by(res_name) %>%
+  summarise(niezgodnosc = mean(abs(local_res_atom_non_h_electron_sum - dict_atom_non_h_electron_sum))) %>%
+  arrange(-niezgodnosc) %>%
+  head(10) 
+
+```
+
+#Rozk³ad wartoœci kolumn zaczynaj¹cych siê od part01_
+
+```{r, part}
+
+dim(top50)
+
+#part01 <- top50 %>% select(starts_with("part_01")) %>% gather(nazwa, wartosc, 1:106)
+
+#ggplot(part01, aes(nazwa, wartosc)) + geom_boxplot()
+
+
+```
+
+#Regresja liniowa
+#Liczba elektronów 
+```{r, regresja_elektrony, warning=FALSE,message=FALSE}
+data_top50 <- top50 %>% select_if(is.numeric)
+ 
+ set.seed(23)
+ partition <- createDataPartition(
+   y = data_top50$local_res_atom_non_h_electron_sum,
+   p = .7,
+   list = FALSE)
+ 
+ data_train <- data_top50 %>% slice(partition)
+ data_test <- data_top50 %>% slice(-partition)
+ dim(data_train)
+ dim(data_test)
+ 
+ set.seed(23)
+ fit <- train(local_res_atom_non_h_electron_sum ~ ., data = data_train, method = "lm")
+ fit
+ 
+ set.seed(23)
+ prediction <- predict(fit, newdata = data_test)
+ postResample(pred = prediction, obs = data_test$local_res_atom_non_h_electron_sum)
+
+```
+#Liczba atomów
+
+```{r, regresja_atomy, warning=FALSE,message=FALSE}
+data_top50a <- top50 %>% select_if(is.numeric)
+ 
+set.seed(23)
+partition <- createDataPartition(
+   y = data_top50a$local_res_atom_non_h_count,
+   p = .7,
+   list = FALSE)
+ 
+data_train_a <- data_top50a %>% slice(partition)
+data_test_a <- data_top50a %>% slice(-partition)
+dim(data_train_a)
+dim(data_test_a)
+
+set.seed(23)
+fit <- train(local_res_atom_non_h_count ~ ., data = data_train_a, method = "lm")
+fit 
+
+set.seed(23)
+prediction <- predict(fit, newdata = data_test_a)
+postResample(pred = prediction, obs = data_test_a$local_res_atom_non_h_count)
+
+```
+
+#Klasyfikator 
+```{r, klasyfikator, warning=TRUE}
+
+# usun <- c("blob_coverage", "res_coverage", "local_res_atom_non_h_count", "local_res_atom_non_h_electron_sum", "dict_atom_non_h_count", "dict_atom_non_h_electron_sum")
+# 
+# data_top50_k <- top50 %>% select(-usun) %>% head(10000)
+# 
+# data_top50_k$res_name <- as.factor(data_top50_k$res_name)
+# 
+# set.seed(23)
+# partition <- createDataPartition(
+# y = data_top50_k$res_name,
+# p = .7,
+# list = FALSE)
+# data_train <- data_top50_k %>%
+#  slice(partition)
+# data_test <- data_top50_k %>%
+#   slice(-partition)
+# dim(data_train)
+# dim(data_test)
+# 
+# set.seed(23)
+# fit <- train(
+#   res_name ~ .,
+#   data = data_train,
+#   method = "rf",
+#   ntree = 10,
+#   na.action  = na.pass)
+# fit
+# 
+# set.seed(23)
+# prediction <- predict(fit, newdata = data_test)
+# confusionMatrix(data = prediction, data_test$res_name)
+
+```
+
+
