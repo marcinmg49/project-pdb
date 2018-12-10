@@ -13,9 +13,18 @@ output:
 
 Projekt by³ dla mnie wymagaj¹cy i ciekawy, poniewa¿ pozwoli³ mi zmierzyæ siê z analiz¹ tak du¿ych danych. Najwiêcej problemów przystworzy³o mi ci¹g³e dostosowywanie danych tak, aby wystarczy³o mi pamiêci operacyjnej. 
 Wykona³em wiêkszoœæ z postawionych zadañ, ale mia³em te¿ problemy mniejsze lub wiêksze. 
+
 Klasyfikator - najtrudniejsza by³a dla mnie budowa klasyfikatora i niestety do tej pory nie dzia³a on najlepiej, poniewa¿ daje wyniki tylko na ma³ej iloœci danych, a nie na ca³ym zbiorze. 
-Rozk³ad wartoœci kolumn zaczynaj¹cych siê od part01_ - uwa¿am, ¿e przedstawienie wszystkich 106 kolumn na jednym wykresie nie jest zbyt optymalne, ale gdy chcia³em stworzyæ osobny dla ka¿dego mia³em b³êdy kompilacji. 
-Reszta zadañ - z wykonania reszty zadañ jestem zadowolony.
+
+Rozk³ad wartoœci kolumn zaczynaj¹cych siê od part01_, uwa¿am, ¿e przedstawienie wszystkich 106 kolumn na jednym wykresie nie jest zbyt optymalne, ale gdy chcia³em stworzyæ osobny dla ka¿dego mia³em b³êdy kompilacji. 
+
+Dane za³adowa³em w ca³oœci, a nastêpnie usun¹³em z nich niepotrzebne dane, a tak¿e wartoœci typu NA. 
+
+Korelecja miêdzy zmiennymi zosta³a przedstawiona za pomoc¹ wykresu i u¿y³em do tego biblioteki ggplot2. 
+
+Wykresy rozk³adów atomów i elektronów s¹ interaktywne. 
+
+W przypadku regresji liniowej zastosowa³em stratyfikowany podzia³ w proporcjach 70 procent ucz¹cy i 30 procent testowy.
 
 
 
